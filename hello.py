@@ -1,8 +1,20 @@
 from markupsafe import escape
-from flask import url_for,redirect,Flask,request,abort
+from flask import url_for, redirect, Flask, request, abort
 from flask import jsonify
+import pymysql
+from pymysql import cursors
+import json
+app = Flask(__name__)  # 为Flask 类创造实例
 
-app = Flask(__name__) # 为Flask 类创造实例
+db = pymysql.connect(host='localhost',
+                     user='root',
+                     password='.',
+                     database='user',
+                     autocommit=False,
+                     cursorclass=cursors.DictCursor)  # 关闭自动提交事务
+
+cursor = db.cursor()
+
 
 # @app.route("/")
 # def hello_world():
@@ -45,19 +57,38 @@ app = Flask(__name__) # 为Flask 类创造实例
 #
 # if __name__ == '__main__':
 #     app.run(debug=True)
-@app.route('/query',methods=['GET','POST'])
+def query_mysql(qq_re):
+    data = []
+    for i in range(1, 37):
+        try:
+
+            sql = f"select * from qq{i} where qq = '{qq_re}'"
+            cursor.execute(sql)
+            result = cursor.fetchall()
+            if len(result)==0:
+                continue
+            else:
+                data.append(result)
+
+        except Exception as e:
+            return f"{e}"
+
+    return data
+
+
+
+@app.route('/query', methods=['GET', 'POST'])
 def find_user():
     if 'qq' in request.args:
         qq_re = request.args.get('qq')
-        response_data = [{'qq':'123456','phone':'456789'},{
-            'qq':'789789','phone':'4567890'
-        }]
-        for x in response_data:
-           if qq_re == x['qq']:
-            return jsonify(x['phone'])
+        data_response = query_mysql(qq_re)
+        if len(data_response)==0:
+            return "null 未查询到"
+        else:
+            for x in data_response:
+                return x
     else:
         return "不存在该字段"
-
 
 
 if __name__ == '__main__':
